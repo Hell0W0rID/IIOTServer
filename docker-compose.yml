@@ -1,0 +1,142 @@
+version: '3.8'
+
+services:
+  # Infrastructure Services
+  consul:
+    image: consul:1.16
+    ports:
+      - "8500:8500"
+    command: "agent -ui -bootstrap -server -client 0.0.0.0"
+    networks:
+      - edgex-network
+
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - edgex-network
+
+  # Core Services
+  core-data:
+    build: .
+    command: ["./core-data"]
+    ports:
+      - "59880:59880"
+    environment:
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - consul
+      - redis
+    networks:
+      - edgex-network
+
+  core-metadata:
+    build: .
+    command: ["./core-metadata"]
+    ports:
+      - "59881:59881"
+    environment:
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - consul
+      - redis
+    networks:
+      - edgex-network
+
+  core-command:
+    build: .
+    command: ["./core-command"]
+    ports:
+      - "59882:59882"
+    environment:
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - consul
+      - redis
+      - core-metadata
+    networks:
+      - edgex-network
+
+  # Support Services
+  support-notifications:
+    build: .
+    command: ["./support-notifications"]
+    ports:
+      - "59860:59860"
+    environment:
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - consul
+      - redis
+    networks:
+      - edgex-network
+
+  support-scheduler:
+    build: .
+    command: ["./support-scheduler"]
+    ports:
+      - "59861:59861"
+    environment:
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - consul
+      - redis
+    networks:
+      - edgex-network
+
+  # Application Services
+  app-service-configurable:
+    build: .
+    command: ["./app-service-configurable"]
+    ports:
+      - "59700:59700"
+    environment:
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - consul
+      - redis
+      - core-data
+    networks:
+      - edgex-network
+
+  # Device Services
+  device-virtual:
+    build: .
+    command: ["./device-virtual"]
+    ports:
+      - "59900:59900"
+    environment:
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - consul
+      - redis
+      - core-data
+      - core-metadata
+    networks:
+      - edgex-network
+
+networks:
+  edgex-network:
+    driver: bridge

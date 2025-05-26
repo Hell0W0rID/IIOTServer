@@ -1,0 +1,1485 @@
+openapi: 3.0.3
+info:
+  title: EdgeX Foundry Complete API Specification
+  description: |
+    Complete API documentation for EdgeX Foundry platform with all services
+    
+    This comprehensive API specification covers all EdgeX services:
+    - Core Services (Data, Metadata, Command)
+    - Support Services (Notifications, Scheduler)
+    - Application Services (Configurable Data Processing)
+    - Device Services (Virtual Device Simulation)
+    
+    All APIs follow EdgeX Foundry v3.1.0 specification standards.
+  version: 3.1.0
+  contact:
+    name: EdgeX Foundry
+    url: https://github.com/Hell0W0rID/IIOTServer
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: http://localhost:59880
+    description: Core Data Service
+  - url: http://localhost:59881
+    description: Core Metadata Service
+  - url: http://localhost:59882
+    description: Core Command Service
+  - url: http://localhost:59860
+    description: Support Notifications Service
+  - url: http://localhost:59861
+    description: Support Scheduler Service
+  - url: http://localhost:59700
+    description: Application Service Configurable
+  - url: http://localhost:59900
+    description: Device Virtual Service
+
+paths:
+  # Core Data Service APIs
+  /api/v3/event:
+    post:
+      tags:
+        - Core Data
+      summary: Add new event
+      description: Create a new event with readings from a device
+      operationId: addEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+            examples:
+              temperature-event:
+                summary: Temperature sensor event
+                value:
+                  deviceName: "Temperature-Sensor-01"
+                  profileName: "TemperatureSensorProfile"
+                  sourceName: "device-virtual"
+                  readings:
+                    - deviceName: "Temperature-Sensor-01"
+                      resourceName: "Temperature"
+                      profileName: "TemperatureSensorProfile"
+                      valueType: "Float64"
+                      simpleReading:
+                        value: "22.5"
+                        units: "Celsius"
+      responses:
+        '201':
+          description: Event created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v3/event/all:
+    get:
+      tags:
+        - Core Data
+      summary: Get all events
+      description: Retrieve all events with optional pagination
+      operationId: getAllEvents
+      parameters:
+        - name: offset
+          in: query
+          description: Number of items to skip
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          description: Maximum number of items to return
+          required: false
+          schema:
+            type: integer
+            default: 20
+            maximum: 1000
+      responses:
+        '200':
+          description: List of events retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultiEventResponse'
+
+  /api/v3/event/id/{id}:
+    get:
+      tags:
+        - Core Data
+      summary: Get event by ID
+      description: Retrieve a specific event by its unique identifier
+      operationId: getEventById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Event ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponse'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Core Data
+      summary: Delete event by ID
+      description: Remove a specific event from the system
+      operationId: deleteEventById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Event ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '404':
+          description: Event not found
+
+  /api/v3/event/device/name/{name}:
+    get:
+      tags:
+        - Core Data
+      summary: Get events by device name
+      description: Retrieve all events for a specific device
+      operationId: getEventsByDeviceName
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Device name
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Events retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultiEventResponse'
+
+  # Core Metadata Service APIs
+  /api/v3/device:
+    post:
+      tags:
+        - Core Metadata
+      summary: Register new device
+      description: Add a new device to the metadata registry
+      operationId: addDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Device'
+            examples:
+              temperature-sensor:
+                summary: Temperature sensor device
+                value:
+                  name: "Temperature-Sensor-01"
+                  description: "Industrial temperature sensor"
+                  profileName: "TemperatureSensorProfile"
+                  serviceName: "device-virtual"
+                  protocols:
+                    modbus:
+                      Address: "192.168.1.100"
+                      Port: "502"
+                      UnitID: "1"
+                  adminState: "UNLOCKED"
+                  operatingState: "UP"
+      responses:
+        '201':
+          description: Device created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '400':
+          description: Invalid device data
+        '409':
+          description: Device name already exists
+
+  /api/v3/device/all:
+    get:
+      tags:
+        - Core Metadata
+      summary: Get all devices
+      description: Retrieve all registered devices
+      operationId: getAllDevices
+      responses:
+        '200':
+          description: Devices retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultiDeviceResponse'
+
+  /api/v3/device/id/{id}:
+    get:
+      tags:
+        - Core Metadata
+      summary: Get device by ID
+      operationId: getDeviceById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Device retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceResponse'
+        '404':
+          description: Device not found
+    put:
+      tags:
+        - Core Metadata
+      summary: Update device
+      operationId: updateDevice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Device'
+      responses:
+        '200':
+          description: Device updated successfully
+        '404':
+          description: Device not found
+    delete:
+      tags:
+        - Core Metadata
+      summary: Delete device
+      operationId: deleteDevice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Device deleted successfully
+        '404':
+          description: Device not found
+
+  /api/v3/device/name/{name}:
+    get:
+      tags:
+        - Core Metadata
+      summary: Get device by name
+      operationId: getDeviceByName
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Device retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceResponse'
+        '404':
+          description: Device not found
+
+  # Core Command Service APIs
+  /api/v3/device/name/{name}/command:
+    get:
+      tags:
+        - Core Command
+      summary: Get device commands
+      description: Retrieve available commands for a device
+      operationId: getDeviceCommands
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Device name
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Commands retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandsResponse'
+        '404':
+          description: Device not found
+
+  /api/v3/device/name/{name}/command/{command}:
+    get:
+      tags:
+        - Core Command
+      summary: Execute GET command
+      description: Execute a GET command on a device
+      operationId: issueGetCommand
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Device name
+          schema:
+            type: string
+        - name: command
+          in: path
+          required: true
+          description: Command name
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Command executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResponse'
+        '404':
+          description: Device or command not found
+        '405':
+          description: Command not supported for GET operation
+    put:
+      tags:
+        - Core Command
+      summary: Execute SET command
+      description: Execute a SET command on a device
+      operationId: issueSetCommand
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Device name
+          schema:
+            type: string
+        - name: command
+          in: path
+          required: true
+          description: Command name
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+            examples:
+              set-temperature:
+                summary: Set temperature setpoint
+                value:
+                  value: "25.0"
+                  units: "Celsius"
+      responses:
+        '200':
+          description: Command executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '404':
+          description: Device or command not found
+        '405':
+          description: Command not supported for SET operation
+
+  # Support Notifications Service APIs
+  /api/v3/notification:
+    post:
+      tags:
+        - Support Notifications
+      summary: Create notification
+      description: Create a new notification
+      operationId: addNotification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Notification'
+            examples:
+              alert-notification:
+                summary: Temperature alert notification
+                value:
+                  category: "ALERT"
+                  content: "Temperature sensor reading above threshold"
+                  contentType: "text/plain"
+                  description: "High temperature alert from sensor"
+                  labels: ["temperature", "alert", "critical"]
+                  sender: "core-data"
+                  severity: "CRITICAL"
+      responses:
+        '201':
+          description: Notification created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+
+  /api/v3/notification/all:
+    get:
+      tags:
+        - Support Notifications
+      summary: Get all notifications
+      operationId: getAllNotifications
+      responses:
+        '200':
+          description: Notifications retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultiNotificationResponse'
+
+  /api/v3/subscription:
+    post:
+      tags:
+        - Support Notifications
+      summary: Create subscription
+      description: Create a new notification subscription
+      operationId: addSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Subscription'
+            examples:
+              email-subscription:
+                summary: Email alert subscription
+                value:
+                  name: "TemperatureAlerts"
+                  categories: ["ALERT"]
+                  labels: ["temperature", "critical"]
+                  receiver: "admin@company.com"
+                  description: "Email notifications for temperature alerts"
+                  channels:
+                    - type: "EMAIL"
+                      recipients: ["admin@company.com", "ops@company.com"]
+                      properties:
+                        smtp_server: "smtp.company.com"
+                        smtp_port: "587"
+      responses:
+        '201':
+          description: Subscription created successfully
+
+  # Support Scheduler Service APIs
+  /api/v3/scheduleevent:
+    post:
+      tags:
+        - Support Scheduler
+      summary: Create schedule event
+      operationId: addScheduleEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleEvent'
+            examples:
+              data-cleanup:
+                summary: Daily data cleanup job
+                value:
+                  name: "DailyDataCleanup"
+                  schedule: "@every 24h"
+                  addressable: "http://core-data:59880/api/v3/cleanup"
+                  parameters: '{"retentionDays": 30}'
+                  service: "core-data"
+                  adminState: "UNLOCKED"
+      responses:
+        '201':
+          description: Schedule event created successfully
+
+  /api/v3/scheduleevent/all:
+    get:
+      tags:
+        - Support Scheduler
+      summary: Get all schedule events
+      operationId: getAllScheduleEvents
+      responses:
+        '200':
+          description: Schedule events retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultiScheduleEventResponse'
+
+  # Application Service APIs
+  /api/v3/pipeline:
+    post:
+      tags:
+        - Application Service
+      summary: Create data pipeline
+      operationId: addPipeline
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pipeline'
+            examples:
+              filter-pipeline:
+                summary: Temperature filtering pipeline
+                value:
+                  name: "TemperatureFilterPipeline"
+                  description: "Filter temperature readings above 30°C"
+                  transforms:
+                    - type: "Filter"
+                      parameters:
+                        condition: "temperature > 30"
+                        resource: "Temperature"
+                    - type: "Convert"
+                      parameters:
+                        format: "json"
+                  target:
+                    type: "HTTP"
+                    host: "external-system.com"
+                    port: 8080
+                    format: "json"
+      responses:
+        '201':
+          description: Pipeline created successfully
+
+  /api/v3/pipeline/all:
+    get:
+      tags:
+        - Application Service
+      summary: Get all pipelines
+      operationId: getAllPipelines
+      responses:
+        '200':
+          description: Pipelines retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultiPipelineResponse'
+
+  /api/v3/process:
+    post:
+      tags:
+        - Application Service
+      summary: Process event through pipelines
+      operationId: processData
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Event processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessResponse'
+
+  # Device Virtual Service APIs
+  /api/v3/device/virtual:
+    get:
+      tags:
+        - Device Virtual
+      summary: Get all virtual devices
+      operationId: getAllVirtualDevices
+      responses:
+        '200':
+          description: Virtual devices retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultiVirtualDeviceResponse'
+    post:
+      tags:
+        - Device Virtual
+      summary: Create virtual device
+      operationId: createVirtualDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VirtualDevice'
+            examples:
+              temp-sensor:
+                summary: Virtual temperature sensor
+                value:
+                  name: "Virtual-Temperature-Sensor-02"
+                  description: "Virtual temperature sensor for testing"
+                  profileName: "TemperatureSensorProfile"
+                  protocols:
+                    virtual: "true"
+                    type: "temperature"
+      responses:
+        '201':
+          description: Virtual device created successfully
+
+  /api/v3/device/virtual/{id}/start:
+    post:
+      tags:
+        - Device Virtual
+      summary: Start virtual device
+      operationId: startVirtualDevice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Virtual device started successfully
+
+  /api/v3/device/virtual/{id}/stop:
+    post:
+      tags:
+        - Device Virtual
+      summary: Stop virtual device
+      operationId: stopVirtualDevice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Virtual device stopped successfully
+
+  # Common Health and System APIs (available on all services)
+  /api/v3/ping:
+    get:
+      tags:
+        - System
+      summary: Health check ping
+      description: Simple health check endpoint
+      operationId: ping
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  apiVersion:
+                    type: string
+                    example: "3.1.0"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2024-01-15T10:30:00Z"
+
+  /api/version:
+    get:
+      tags:
+        - System
+      summary: Get service version
+      operationId: getVersion
+      responses:
+        '200':
+          description: Service version information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  apiVersion:
+                    type: string
+                    example: "3.1.0"
+                  serviceName:
+                    type: string
+                    example: "core-data"
+                  version:
+                    type: string
+                    example: "3.1.0"
+
+components:
+  schemas:
+    # Core Data Models
+    Event:
+      type: object
+      required:
+        - deviceName
+        - profileName
+        - sourceName
+        - readings
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        deviceName:
+          type: string
+          description: Name of the device that generated the event
+          example: "Temperature-Sensor-01"
+        profileName:
+          type: string
+          description: Name of the device profile
+          example: "TemperatureSensorProfile"
+        sourceName:
+          type: string
+          description: Name of the service that created the event
+          example: "device-virtual"
+        origin:
+          type: integer
+          format: int64
+          description: Timestamp when the event originated
+        readings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reading'
+        tags:
+          type: object
+          additionalProperties: true
+          description: Optional metadata tags
+        created:
+          type: integer
+          format: int64
+          readOnly: true
+        modified:
+          type: integer
+          format: int64
+          readOnly: true
+
+    Reading:
+      type: object
+      required:
+        - deviceName
+        - resourceName
+        - profileName
+        - valueType
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        origin:
+          type: integer
+          format: int64
+        deviceName:
+          type: string
+          example: "Temperature-Sensor-01"
+        resourceName:
+          type: string
+          example: "Temperature"
+        profileName:
+          type: string
+          example: "TemperatureSensorProfile"
+        valueType:
+          type: string
+          enum: [Bool, String, Uint8, Uint16, Uint32, Uint64, Int8, Int16, Int32, Int64, Float32, Float64, Binary]
+          example: "Float64"
+        simpleReading:
+          $ref: '#/components/schemas/SimpleReading'
+        binaryReading:
+          $ref: '#/components/schemas/BinaryReading'
+        objectReading:
+          $ref: '#/components/schemas/ObjectReading'
+        tags:
+          type: object
+          additionalProperties: true
+        created:
+          type: integer
+          format: int64
+          readOnly: true
+        modified:
+          type: integer
+          format: int64
+          readOnly: true
+
+    SimpleReading:
+      type: object
+      properties:
+        value:
+          type: string
+          description: String representation of the reading value
+          example: "22.5"
+        units:
+          type: string
+          description: Units of measurement
+          example: "Celsius"
+
+    BinaryReading:
+      type: object
+      properties:
+        binaryValue:
+          type: string
+          format: byte
+          description: Base64 encoded binary data
+        mediaType:
+          type: string
+          description: MIME type of the binary data
+          example: "image/jpeg"
+
+    ObjectReading:
+      type: object
+      properties:
+        objectValue:
+          type: object
+          description: Complex object value
+
+    # Metadata Models
+    Device:
+      type: object
+      required:
+        - name
+        - profileName
+        - serviceName
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          description: Unique device name
+          example: "Temperature-Sensor-01"
+        description:
+          type: string
+          example: "Industrial temperature sensor"
+        adminState:
+          type: string
+          enum: [LOCKED, UNLOCKED]
+          default: UNLOCKED
+        operatingState:
+          type: string
+          enum: [UP, DOWN, UNKNOWN]
+          default: UP
+        protocols:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: true
+          example:
+            modbus:
+              Address: "192.168.1.100"
+              Port: "502"
+              UnitID: "1"
+        lastConnected:
+          type: integer
+          format: int64
+        lastReported:
+          type: integer
+          format: int64
+        labels:
+          type: array
+          items:
+            type: string
+        location:
+          type: object
+          additionalProperties: true
+        serviceName:
+          type: string
+          example: "device-virtual"
+        profileName:
+          type: string
+          example: "TemperatureSensorProfile"
+        autoEvents:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutoEvent'
+        created:
+          type: integer
+          format: int64
+          readOnly: true
+        modified:
+          type: integer
+          format: int64
+          readOnly: true
+
+    AutoEvent:
+      type: object
+      properties:
+        interval:
+          type: string
+          description: Frequency of automatic event generation
+          example: "30s"
+        onChange:
+          type: boolean
+          description: Whether to generate events only on value change
+        resource:
+          type: string
+          description: Name of the device resource
+
+    # Support Services Models
+    Notification:
+      type: object
+      required:
+        - category
+        - content
+        - sender
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        category:
+          type: string
+          description: Notification category
+          example: "ALERT"
+        content:
+          type: string
+          description: Notification message content
+          example: "Temperature reading above threshold"
+        contentType:
+          type: string
+          default: "text/plain"
+          example: "text/plain"
+        description:
+          type: string
+          example: "High temperature alert"
+        labels:
+          type: array
+          items:
+            type: string
+          example: ["temperature", "alert", "critical"]
+        sender:
+          type: string
+          description: Service that sent the notification
+          example: "core-data"
+        severity:
+          type: string
+          enum: [MINOR, NORMAL, CRITICAL]
+          example: "CRITICAL"
+        status:
+          type: string
+          enum: [NEW, PROCESSED, ESCALATED]
+          readOnly: true
+        created:
+          type: integer
+          format: int64
+          readOnly: true
+        modified:
+          type: integer
+          format: int64
+          readOnly: true
+
+    Subscription:
+      type: object
+      required:
+        - name
+        - channels
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          description: Unique subscription name
+          example: "TemperatureAlerts"
+        channels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Channel'
+        categories:
+          type: array
+          items:
+            type: string
+          example: ["ALERT"]
+        labels:
+          type: array
+          items:
+            type: string
+          example: ["temperature", "critical"]
+        receiver:
+          type: string
+          description: Primary recipient
+          example: "admin@company.com"
+        description:
+          type: string
+          example: "Email notifications for temperature alerts"
+        resendLimit:
+          type: integer
+          default: 3
+        resendInterval:
+          type: string
+          default: "5m"
+        created:
+          type: integer
+          format: int64
+          readOnly: true
+        modified:
+          type: integer
+          format: int64
+          readOnly: true
+
+    Channel:
+      type: object
+      required:
+        - type
+        - recipients
+      properties:
+        type:
+          type: string
+          enum: [EMAIL, SMS, WEBHOOK]
+          example: "EMAIL"
+        host:
+          type: string
+          example: "smtp.company.com"
+        port:
+          type: integer
+          example: 587
+        recipients:
+          type: array
+          items:
+            type: string
+          example: ["admin@company.com", "ops@company.com"]
+        properties:
+          type: object
+          additionalProperties: true
+          example:
+            smtp_server: "smtp.company.com"
+            smtp_port: "587"
+
+    ScheduleEvent:
+      type: object
+      required:
+        - name
+        - schedule
+        - addressable
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          description: Unique schedule name
+          example: "DailyDataCleanup"
+        schedule:
+          type: string
+          description: Cron-like schedule expression
+          example: "@every 24h"
+        addressable:
+          type: string
+          description: Target endpoint URL
+          example: "http://core-data:59880/api/v3/cleanup"
+        parameters:
+          type: string
+          description: JSON parameters for the scheduled action
+          example: '{"retentionDays": 30}'
+        service:
+          type: string
+          description: Target service name
+          example: "core-data"
+        adminState:
+          type: string
+          enum: [LOCKED, UNLOCKED]
+          default: UNLOCKED
+        created:
+          type: integer
+          format: int64
+          readOnly: true
+        modified:
+          type: integer
+          format: int64
+          readOnly: true
+
+    # Application Service Models
+    Pipeline:
+      type: object
+      required:
+        - name
+        - transforms
+        - target
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          description: Unique pipeline name
+          example: "TemperatureFilterPipeline"
+        description:
+          type: string
+          example: "Filter temperature readings above 30°C"
+        transforms:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transform'
+        target:
+          $ref: '#/components/schemas/Target'
+        adminState:
+          type: string
+          enum: [LOCKED, UNLOCKED]
+          default: UNLOCKED
+        created:
+          type: integer
+          format: int64
+          readOnly: true
+        modified:
+          type: integer
+          format: int64
+          readOnly: true
+
+    Transform:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum: [Filter, Convert, Batch, Compress]
+          example: "Filter"
+        parameters:
+          type: object
+          additionalProperties: true
+          example:
+            condition: "temperature > 30"
+            resource: "Temperature"
+
+    Target:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum: [HTTP, MQTT, FILE]
+          example: "HTTP"
+        host:
+          type: string
+          example: "external-system.com"
+        port:
+          type: integer
+          example: 8080
+        topic:
+          type: string
+          description: MQTT topic (for MQTT targets)
+        format:
+          type: string
+          default: "json"
+        parameters:
+          type: object
+          additionalProperties: true
+
+    # Device Virtual Models
+    VirtualDevice:
+      type: object
+      required:
+        - name
+        - profileName
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          example: "Virtual-Temperature-Sensor-02"
+        description:
+          type: string
+          example: "Virtual temperature sensor for testing"
+        profileName:
+          type: string
+          example: "TemperatureSensorProfile"
+        serviceName:
+          type: string
+          readOnly: true
+          example: "device-virtual"
+        adminState:
+          type: string
+          enum: [LOCKED, UNLOCKED]
+          default: UNLOCKED
+        operatingState:
+          type: string
+          enum: [UP, DOWN, UNKNOWN]
+          default: UP
+        protocols:
+          type: object
+          additionalProperties: true
+          example:
+            virtual: "true"
+            type: "temperature"
+        lastReading:
+          type: string
+          format: date-time
+          readOnly: true
+        isRunning:
+          type: boolean
+          readOnly: true
+
+    # Response Models
+    BaseResponse:
+      type: object
+      properties:
+        apiVersion:
+          type: string
+          example: "3.1.0"
+        statusCode:
+          type: integer
+          example: 201
+        id:
+          type: string
+          format: uuid
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        apiVersion:
+          type: string
+          example: "3.1.0"
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "Invalid request data"
+
+    EventResponse:
+      type: object
+      properties:
+        apiVersion:
+          type: string
+          example: "3.1.0"
+        statusCode:
+          type: integer
+          example: 200
+        event:
+          $ref: '#/components/schemas/Event'
+
+    MultiEventResponse:
+      type: object
+      properties:
+        apiVersion:
+          type: string
+          example: "3.1.0"
+        statusCode:
+          type: integer
+          example: 200
+        totalCount:
+          type: integer
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+
+    DeviceResponse:
+      type: object
+      properties:
+        apiVersion:
+          type: string
+          example: "3.1.0"
+        statusCode:
+          type: integer
+          example: 200
+        device:
+          $ref: '#/components/schemas/Device'
+
+    MultiDeviceResponse:
+      type: object
+      properties:
+        apiVersion:
+          type: string
+          example: "3.1.0"
+        statusCode:
+          type: integer
+          example: 200
+        totalCount:
+          type: integer
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/Device'
+
+    CommandsResponse:
+      type: object
+      properties:
+        apiVersion:
+          type: string
+          example: "3.1.0"
+        statusCode:
+          type: integer
+          example: 200
+        deviceName:
+          type: string
+        commands:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              get:
+                type: boolean
+              set:
+                type: boolean
+              path:
+                type: string
+              parameters:
+                type: array
+                items:
+                  type: string
+
+    CommandResponse:
+      type: object
+      properties:
+        apiVersion:
+          type: string
+          example: "3.1.0"
+        statusCode:
+          type: integer
+          example: 200
+        event:
+          $ref: '#/components/schemas/Event'
+
+    MultiNotificationResponse:
+      type: object
+      properties:
+        apiVersion:
+          type: string
+          example: "3.1.0"
+        statusCode:
+          type: integer
+          example: 200
+        totalCount:
+          type: integer
+        notifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+
+    MultiScheduleEventResponse:
+      type: object
+      properties:
+        apiVersion:
+          type: string
+          example: "3.1.0"
+        statusCode:
+          type: integer
+          example: 200
+        totalCount:
+          type: integer
+        scheduleEvents:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleEvent'
+
+    MultiPipelineResponse:
+      type: object
+      properties:
+        apiVersion:
+          type: string
+          example: "3.1.0"
+        statusCode:
+          type: integer
+          example: 200
+        totalCount:
+          type: integer
+        pipelines:
+          type: array
+          items:
+            $ref: '#/components/schemas/Pipeline'
+
+    ProcessResponse:
+      type: object
+      properties:
+        apiVersion:
+          type: string
+          example: "3.1.0"
+        statusCode:
+          type: integer
+          example: 200
+        processedEvent:
+          $ref: '#/components/schemas/Event'
+        pipelineResults:
+          type: array
+          items:
+            type: object
+        totalPipelines:
+          type: integer
+
+    MultiVirtualDeviceResponse:
+      type: object
+      properties:
+        apiVersion:
+          type: string
+          example: "3.1.0"
+        statusCode:
+          type: integer
+          example: 200
+        totalCount:
+          type: integer
+        virtualDevices:
+          type: array
+          items:
+            $ref: '#/components/schemas/VirtualDevice'
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - ApiKeyAuth: []
+  - BearerAuth: []
+
+tags:
+  - name: Core Data
+    description: Event and reading data management
+  - name: Core Metadata
+    description: Device, profile, and service metadata management
+  - name: Core Command
+    description: Device command execution and control
+  - name: Support Notifications
+    description: Notification and subscription management
+  - name: Support Scheduler
+    description: Job scheduling and automation
+  - name: Application Service
+    description: Data processing pipelines and export
+  - name: Device Virtual
+    description: Virtual device simulation and management
+  - name: System
+    description: System health and version information
